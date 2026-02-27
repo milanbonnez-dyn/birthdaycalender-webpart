@@ -159,6 +159,13 @@ export class BirthdayService {
   }
 
   private async _doEnsureDefaultView(listTitle: string): Promise<void> {
+    // sessionStorage gate: only run once per browser session (survives page refresh)
+    let sessionKey: string | undefined;
+    try {
+      sessionKey = `birthdayViewOk_${this.siteUrl}_${listTitle}`;
+      if (sessionStorage.getItem(sessionKey)) return;
+    } catch (e) { /* sessionStorage not available, continue */ }
+
     try {
       const viewBase = `${this.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/defaultview`;
       const postHeaders = {
@@ -167,7 +174,7 @@ export class BirthdayService {
       };
       const desiredFields = ['Persoon', 'Geboortedatum', 'DatumEersteWerkdag'];
 
-      // Read current view fields via SchemaXml (format-agnostic)
+      // Read current view fields
       const fieldsResponse: SPHttpClientResponse = await this.spHttpClient.get(
         `${viewBase}/viewfields`,
         SPHttpClient.configurations.v1
@@ -175,28 +182,48 @@ export class BirthdayService {
       if (!fieldsResponse.ok) return;
 
       const fieldsData = await fieldsResponse.json();
-      const schemaXml: string = fieldsData.SchemaXml || '';
-      const currentFields: string[] = [];
-      const nameRegex = /Name="([^"]+)"/g;
-      let match: RegExpExecArray | null;
-      // eslint-disable-next-line no-cond-assign
-      while ((match = nameRegex.exec(schemaXml)) !== null) {
-        currentFields.push(match[1]);
+
+      // Items array is more reliable than SchemaXml parsing;
+      // handle both minimal-metadata (array) and verbose (results wrapper) formats
+      let currentFields: string[];
+      if (Array.isArray(fieldsData.Items)) {
+        currentFields = fieldsData.Items as string[];
+      } else if (fieldsData.Items && Array.isArray(fieldsData.Items.results)) {
+        currentFields = fieldsData.Items.results as string[];
+      } else {
+        // Fallback: parse SchemaXml
+        const schemaXml: string = fieldsData.SchemaXml || '';
+        currentFields = [];
+        const nameRegex = /Name="([^"]+)"/g;
+        let m: RegExpExecArray | null;
+        // eslint-disable-next-line no-cond-assign
+        while ((m = nameRegex.exec(schemaXml)) !== null) {
+          currentFields.push(m[1]);
+        }
       }
 
-      // Only update when the view doesn't already match
+      // Already correct — mark session and skip modification
       const alreadyCorrect =
         currentFields.length === desiredFields.length &&
         desiredFields.every((f, i) => currentFields[i] === f);
 
-      if (alreadyCorrect) return;
+      if (alreadyCorrect) {
+        try { if (sessionKey) sessionStorage.setItem(sessionKey, '1'); } catch (e) { /* ignore */ }
+        return;
+      }
 
-      await this.spHttpClient.post(
+      // Delete all existing view fields — abort if this fails to prevent duplicates
+      const deleteResponse: SPHttpClientResponse = await this.spHttpClient.post(
         `${viewBase}/viewfields/deleteallviewfields`,
         SPHttpClient.configurations.v1,
-        { headers: postHeaders }
+        { headers: postHeaders, body: '{}' }
       );
+      if (!deleteResponse.ok) {
+        console.warn('BirthdayService: deleteallviewfields mislukt', deleteResponse.status);
+        return;
+      }
 
+      // Add desired fields in order
       for (const field of desiredFields) {
         await this.spHttpClient.post(
           `${viewBase}/viewfields/addviewfield('${field}')`,
@@ -205,6 +232,7 @@ export class BirthdayService {
         );
       }
 
+      try { if (sessionKey) sessionStorage.setItem(sessionKey, '1'); } catch (e) { /* ignore */ }
       console.log('BirthdayService: Default view updated.');
     } catch (e) {
       console.warn('BirthdayService: ensureDefaultView mislukt', e);
