@@ -159,12 +159,14 @@ export class BirthdayService {
   }
 
   private async _doEnsureDefaultView(listTitle: string): Promise<void> {
-    // sessionStorage gate: only run once per browser session (survives page refresh)
-    let sessionKey: string | undefined;
+    // localStorage gate — persists across refreshes and browser restarts.
+    // After the first attempt (success or failure) this function never runs again,
+    // which prevents columns from being added on every page load.
+    let storageKey: string | undefined;
     try {
-      sessionKey = `birthdayViewOk_${this.siteUrl}_${listTitle}`;
-      if (sessionStorage.getItem(sessionKey)) return;
-    } catch (e) { /* sessionStorage not available, continue */ }
+      storageKey = `bdViewOk_${this.siteUrl}_${listTitle}`;
+      if (localStorage.getItem(storageKey)) return;
+    } catch (e) { /* localStorage not available, continue */ }
 
     try {
       const viewBase = `${this.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/defaultview`;
@@ -183,17 +185,14 @@ export class BirthdayService {
 
       const fieldsData = await fieldsResponse.json();
 
-      // Items array is more reliable than SchemaXml parsing;
-      // handle both minimal-metadata (array) and verbose (results wrapper) formats
-      let currentFields: string[];
+      // Parse current fields — try Items array (minimal + verbose), fall back to SchemaXml
+      let currentFields: string[] = [];
       if (Array.isArray(fieldsData.Items)) {
         currentFields = fieldsData.Items as string[];
       } else if (fieldsData.Items && Array.isArray(fieldsData.Items.results)) {
         currentFields = fieldsData.Items.results as string[];
       } else {
-        // Fallback: parse SchemaXml
         const schemaXml: string = fieldsData.SchemaXml || '';
-        currentFields = [];
         const nameRegex = /Name="([^"]+)"/g;
         let m: RegExpExecArray | null;
         // eslint-disable-next-line no-cond-assign
@@ -202,13 +201,13 @@ export class BirthdayService {
         }
       }
 
-      // Already correct — mark session and skip modification
+      // View already has exactly the desired fields — nothing to do
       const alreadyCorrect =
         currentFields.length === desiredFields.length &&
         desiredFields.every((f, i) => currentFields[i] === f);
 
       if (alreadyCorrect) {
-        try { if (sessionKey) sessionStorage.setItem(sessionKey, '1'); } catch (e) { /* ignore */ }
+        console.log('BirthdayService: Default view already correct.');
         return;
       }
 
@@ -232,10 +231,13 @@ export class BirthdayService {
         );
       }
 
-      try { if (sessionKey) sessionStorage.setItem(sessionKey, '1'); } catch (e) { /* ignore */ }
       console.log('BirthdayService: Default view updated.');
     } catch (e) {
       console.warn('BirthdayService: ensureDefaultView mislukt', e);
+    } finally {
+      // Always mark as done after first attempt — even if something failed.
+      // This is the key guard that prevents the function from running on every page load.
+      try { if (storageKey) localStorage.setItem(storageKey, '1'); } catch (e) { /* ignore */ }
     }
   }
 
