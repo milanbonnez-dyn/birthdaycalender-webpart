@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "mind-sp-fx-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/mindSpFx/MindSpFxWebPart.js",
+          "manifest": "./src/webparts/mindSpFx/MindSpFxWebPart.manifest.json"
+        }
+      ]
+    },
+    "announcements-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/announcements/AnnouncementsWebPart.js",
+          "manifest": "./src/webparts/announcements/AnnouncementsWebPart.manifest.json"
+        }
+      ]
+    },
+    "birthday-calendar-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/birthdayCalendar/BirthdayCalendarWebPart.js",
+          "manifest": "./src/webparts/birthdayCalendar/BirthdayCalendarWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "MindSpFxWebPartStrings": "lib/webparts/mindSpFx/loc/{locale}.js",
+    "AnnouncementsWebPartStrings": "lib/webparts/announcements/loc/{locale}.js",
+    "BirthdayCalendarWebPartStrings": "lib/webparts/birthdayCalendar/loc/{locale}.js"
+  }
+}

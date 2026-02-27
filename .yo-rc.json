@@ -1,0 +1,18 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": false,
+    "nodeVersion": "18.20.4",
+    "sdksVersions": {},
+    "version": "1.21.1",
+    "libraryName": "m-in-d-sp-fx",
+    "libraryId": "625d742d-23e1-42c2-b96f-8e7090f407b0",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "m-in-d-sp-fx",
+    "solutionShortDescription": "m-in-d-sp-fx description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

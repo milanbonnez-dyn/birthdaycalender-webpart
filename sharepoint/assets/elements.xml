@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Elements xmlns="http://schemas.microsoft.com/sharepoint/">
+  <ListInstance
+    Title="Verjaardagen"
+    Description="Lijst met verjaardagen en startdatums."
+    TemplateType="100"
+    Url="Lists/Verjaardagen" />
+</Elements>

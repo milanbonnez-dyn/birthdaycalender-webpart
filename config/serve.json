@@ -1,0 +1,6 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "https": true,
+  "initialPage": "https://dynamatesandbox.sharepoint.com/sites/MInD-solutions/_layouts/15/workbench.aspx"
+}

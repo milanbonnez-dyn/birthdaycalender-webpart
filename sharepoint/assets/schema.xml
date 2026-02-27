@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<List xmlns="http://schemas.microsoft.com/sharepoint/"
+  Title="Verjaardagen"
+  FolderCreation="FALSE"
+  Url="Lists/Verjaardagen"
+  BaseType="0">
+  <MetaData>
+    <ContentTypes>
+      <ContentTypeRef ID="0x01" />
+    </ContentTypes>
+    <Fields>
+      <Field
+        ID="{3A7F9E2A-4B6C-4D8E-9F1A-2B3C4D5E6F7A}"
+        Name="Geboortedatum"
+        StaticName="Geboortedatum"
+        DisplayName="Geboortedatum"
+        Type="DateTime"
+        Format="DateOnly"
+        Required="FALSE"
+        Group="Custom Columns" />
+      <Field
+        ID="{7E2B5C4D-6A1F-4E9B-8C3D-1F2A3B4C5D6E}"
+        Name="DatumEersteWerkdag"
+        StaticName="DatumEersteWerkdag"
+        DisplayName="Datum eerste werkdag"
+        Type="DateTime"
+        Format="DateOnly"
+        Required="FALSE"
+        Group="Custom Columns" />
+    </Fields>
+    <Views>
+      <View BaseViewID="1" Type="HTML" DisplayName="Alle items" DefaultView="TRUE"
+        MobileView="TRUE" MobileDefaultView="TRUE" Url="AllItems.aspx">
+        <ViewFields>
+          <FieldRef Name="LinkTitle" />
+          <FieldRef Name="Geboortedatum" />
+          <FieldRef Name="DatumEersteWerkdag" />
+        </ViewFields>
+        <Query>
+          <OrderBy>
+            <FieldRef Name="Title" />
+          </OrderBy>
+        </Query>
+        <RowLimit Paged="TRUE">30</RowLimit>
+      </View>
+    </Views>
+  </MetaData>
+</List>

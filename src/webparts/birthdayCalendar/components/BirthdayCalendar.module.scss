@@ -1,0 +1,349 @@
+@import '~@microsoft/sp-office-ui-fabric-core/dist/sass/SPFabricCore.scss';
+
+.birthdayCalendar {
+  font-family: $ms-font-family-fallbacks;
+  padding: 20px;
+  background-color: "[theme:white, default: #ffffff]";
+  border-radius: 8px;
+
+  &.dark {
+    background-color: "[theme:neutralLighter, default: #f3f2f1]";
+  }
+}
+
+.title {
+  @include ms-font-xl;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  color: "[theme:neutralPrimary, default: #323130]";
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &::before {
+    content: "🎂";
+    font-size: 24px;
+  }
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: "[theme:neutralSecondary, default: #605e5c]";
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid "[theme:neutralLight, default: #edebe9]";
+  border-top-color: "[theme:themePrimary, default: #0078d4]";
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+  border-radius: 12px;
+  color: #c53030;
+  border: 1px solid #feb2b2;
+}
+
+.errorIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #c53030;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.empty {
+  padding: 40px;
+  text-align: center;
+  color: "[theme:neutralSecondary, default: #605e5c]";
+  font-style: italic;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  border-radius: 12px;
+}
+
+// Horizontal grid layout
+.birthdayList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+// Modern celebration card design
+.birthdayCard {
+  flex: 1 1 200px;
+  max-width: 280px;
+  min-width: 180px;
+  position: relative;
+  padding: 20px;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+
+  // Decorative top accent
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  }
+
+  // Subtle confetti decoration
+  &::after {
+    content: "🎉";
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 20px;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.2);
+
+    &::after {
+      opacity: 1;
+      transform: scale(1.2) rotate(10deg);
+    }
+  }
+
+  // Work anniversary variant — teal accent
+  &.workAnniversary {
+    &::before {
+      background: linear-gradient(90deg, #38b2ac 0%, #319795 50%, #2c7a7b 100%);
+    }
+
+    &::after {
+      content: "💼";
+    }
+
+    &:hover {
+      box-shadow: 0 12px 30px rgba(56, 178, 172, 0.2);
+    }
+  }
+
+  // Milestone birthday (20, 30, 40, 50, 60) — gold emphasis
+  &.milestone {
+    border: 2px solid #d69e2e;
+    background: linear-gradient(145deg, #fffff0 0%, #fefcbf 100%);
+
+    &::before {
+      background: linear-gradient(90deg, #d69e2e 0%, #ecc94b 50%, #f6e05e 100%);
+      height: 5px;
+    }
+
+    &::after {
+      content: "⭐";
+      opacity: 1;
+      animation: celebrationBounce 2s ease-in-out infinite;
+    }
+
+    &:hover {
+      box-shadow: 0 12px 30px rgba(214, 158, 46, 0.3);
+    }
+  }
+
+  // Special styling for today's birthday
+  &.isToday {
+    background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+
+    &::before {
+      background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%);
+      height: 5px;
+    }
+
+    &::after {
+      content: "🎊";
+      opacity: 1;
+      animation: celebrationBounce 1s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes celebrationBounce {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.3) rotate(15deg);
+  }
+}
+
+// Cake icon container
+.iconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.cardContent {
+  position: relative;
+  z-index: 1;
+}
+
+.name {
+  @include ms-font-l;
+  font-weight: 700;
+  color: "[theme:neutralPrimary, default: #323130]";
+  margin-bottom: 8px;
+  line-height: 1.3;
+  display: block;
+}
+
+.todayBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  @include ms-font-s;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border-radius: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+
+  &::before {
+    content: "⭐";
+    font-size: 12px;
+  }
+}
+
+.dateInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.date {
+  @include ms-font-m;
+  color: "[theme:neutralSecondary, default: #605e5c]";
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &::before {
+    content: "📅";
+    font-size: 14px;
+  }
+}
+
+.age {
+  @include ms-font-s;
+  color: "[theme:neutralTertiary, default: #a19f9d]";
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 2px;
+
+  &::before {
+    content: "🎈";
+    font-size: 12px;
+  }
+}
+
+.daysUntil {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  @include ms-font-s;
+  margin-top: 12px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  color: #4f46e5;
+  border-radius: 20px;
+  font-weight: 600;
+
+  &::before {
+    content: "⏳";
+    font-size: 12px;
+  }
+}
+
+.leapYearNote {
+  @include ms-font-xs;
+  color: "[theme:neutralTertiary, default: #a19f9d]";
+  font-style: italic;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &::before {
+    content: "🌟";
+    font-size: 10px;
+  }
+}
+
+// Type chip — "Verjaardag" or "Werkjubileum"
+.typeLabel {
+  display: inline-flex;
+  align-items: center;
+  @include ms-font-xs;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.typeLabelBirthday {
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  color: #4f46e5;
+}
+
+.typeLabelWork {
+  background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+  color: #2c7a7b;
+}
+
+// Years count — "Wordt X jaar" / "X jaar in dienst"
+.yearsLabel {
+  @include ms-font-s;
+  color: "[theme:neutralSecondary, default: #605e5c]";
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 2px;
+  font-weight: 600;
+}
