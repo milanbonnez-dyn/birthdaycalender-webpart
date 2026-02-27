@@ -137,34 +137,67 @@ export class BirthdayService {
     console.log(`BirthdayService: Column '${internalName}' created.`);
   }
 
+  // Deduplicates concurrent ensureDefaultView calls across multiple webpart instances
+  private static readonly _viewSetupPromises = new Map<string, Promise<void>>();
+
   /**
    * Sets the default view of the list to show only the three relevant columns.
+   * Checks current view fields first — only modifies when the view differs from
+   * the desired state. Concurrent calls for the same list are deduplicated.
    * Silently fails for users without Manage Lists permission.
    */
-  public async ensureDefaultView(listTitle: string): Promise<void> {
+  public ensureDefaultView(listTitle: string): Promise<void> {
+    const key = `${this.siteUrl}|${listTitle}`;
+    const existing = BirthdayService._viewSetupPromises.get(key);
+    if (existing) return existing;
+
+    const cleanup = (): void => { BirthdayService._viewSetupPromises.delete(key); };
+    const promise = this._doEnsureDefaultView(listTitle).then(cleanup, (e) => { cleanup(); throw e; });
+
+    BirthdayService._viewSetupPromises.set(key, promise);
+    return promise;
+  }
+
+  private async _doEnsureDefaultView(listTitle: string): Promise<void> {
     try {
       const viewBase = `${this.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/defaultview`;
       const postHeaders = {
         'Content-Type': 'application/json;odata=nometadata',
         'Accept': 'application/json;odata=nometadata'
       };
+      const desiredFields = ['Persoon', 'Geboortedatum', 'DatumEersteWerkdag'];
 
-      // Verify the default view exists and we can access it
-      const viewResponse: SPHttpClientResponse = await this.spHttpClient.get(
-        viewBase,
+      // Read current view fields via SchemaXml (format-agnostic)
+      const fieldsResponse: SPHttpClientResponse = await this.spHttpClient.get(
+        `${viewBase}/viewfields`,
         SPHttpClient.configurations.v1
       );
-      if (!viewResponse.ok) return;
+      if (!fieldsResponse.ok) return;
 
-      // Remove all existing view fields
+      const fieldsData = await fieldsResponse.json();
+      const schemaXml: string = fieldsData.SchemaXml || '';
+      const currentFields: string[] = [];
+      const nameRegex = /Name="([^"]+)"/g;
+      let match: RegExpExecArray | null;
+      // eslint-disable-next-line no-cond-assign
+      while ((match = nameRegex.exec(schemaXml)) !== null) {
+        currentFields.push(match[1]);
+      }
+
+      // Only update when the view doesn't already match
+      const alreadyCorrect =
+        currentFields.length === desiredFields.length &&
+        desiredFields.every((f, i) => currentFields[i] === f);
+
+      if (alreadyCorrect) return;
+
       await this.spHttpClient.post(
         `${viewBase}/viewfields/deleteallviewfields`,
         SPHttpClient.configurations.v1,
         { headers: postHeaders }
       );
 
-      // Add the desired fields in order
-      for (const field of ['Persoon', 'Geboortedatum', 'DatumEersteWerkdag']) {
+      for (const field of desiredFields) {
         await this.spHttpClient.post(
           `${viewBase}/viewfields/addviewfield('${field}')`,
           SPHttpClient.configurations.v1,
