@@ -4,5 +4,6 @@
     Title="Verjaardagen"
     Description="Lijst met verjaardagen en startdatums."
     TemplateType="100"
-    Url="Lists/Verjaardagen" />
+    Url="Lists/Verjaardagen"
+    CustomSchema="schema.xml" />
 </Elements>

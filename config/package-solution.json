@@ -3,7 +3,7 @@
   "solution": {
     "name": "mind-verjaardagen-client-side-solution",
     "id": "1aa3a68c-e6a7-4a11-a86e-51af3f76691b",
-    "version": "1.0.0.6",
+    "version": "1.0.0.7",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": false,
     "isDomainIsolated": false,

@@ -137,110 +137,6 @@ export class BirthdayService {
     console.log(`BirthdayService: Column '${internalName}' created.`);
   }
 
-  // Deduplicates concurrent ensureDefaultView calls across multiple webpart instances
-  private static readonly _viewSetupPromises = new Map<string, Promise<void>>();
-
-  /**
-   * Sets the default view of the list to show only the three relevant columns.
-   * Checks current view fields first — only modifies when the view differs from
-   * the desired state. Concurrent calls for the same list are deduplicated.
-   * Silently fails for users without Manage Lists permission.
-   */
-  public ensureDefaultView(listTitle: string): Promise<void> {
-    const key = `${this.siteUrl}|${listTitle}`;
-    const existing = BirthdayService._viewSetupPromises.get(key);
-    if (existing) return existing;
-
-    const cleanup = (): void => { BirthdayService._viewSetupPromises.delete(key); };
-    const promise = this._doEnsureDefaultView(listTitle).then(cleanup, (e) => { cleanup(); throw e; });
-
-    BirthdayService._viewSetupPromises.set(key, promise);
-    return promise;
-  }
-
-  private async _doEnsureDefaultView(listTitle: string): Promise<void> {
-    // localStorage gate — persists across refreshes and browser restarts.
-    // After the first attempt (success or failure) this function never runs again,
-    // which prevents columns from being added on every page load.
-    let storageKey: string | undefined;
-    try {
-      storageKey = `bdViewOk_${this.siteUrl}_${listTitle}`;
-      if (localStorage.getItem(storageKey)) return;
-    } catch (e) { /* localStorage not available, continue */ }
-
-    try {
-      const viewBase = `${this.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/defaultview`;
-      const postHeaders = {
-        'Content-Type': 'application/json;odata=nometadata',
-        'Accept': 'application/json;odata=nometadata'
-      };
-      const desiredFields = ['Persoon', 'Geboortedatum', 'DatumEersteWerkdag'];
-
-      // Read current view fields
-      const fieldsResponse: SPHttpClientResponse = await this.spHttpClient.get(
-        `${viewBase}/viewfields`,
-        SPHttpClient.configurations.v1
-      );
-      if (!fieldsResponse.ok) return;
-
-      const fieldsData = await fieldsResponse.json();
-
-      // Parse current fields — try Items array (minimal + verbose), fall back to SchemaXml
-      let currentFields: string[] = [];
-      if (Array.isArray(fieldsData.Items)) {
-        currentFields = fieldsData.Items as string[];
-      } else if (fieldsData.Items && Array.isArray(fieldsData.Items.results)) {
-        currentFields = fieldsData.Items.results as string[];
-      } else {
-        const schemaXml: string = fieldsData.SchemaXml || '';
-        const nameRegex = /Name="([^"]+)"/g;
-        let m: RegExpExecArray | null;
-        // eslint-disable-next-line no-cond-assign
-        while ((m = nameRegex.exec(schemaXml)) !== null) {
-          currentFields.push(m[1]);
-        }
-      }
-
-      // View already has exactly the desired fields — nothing to do
-      const alreadyCorrect =
-        currentFields.length === desiredFields.length &&
-        desiredFields.every((f, i) => currentFields[i] === f);
-
-      if (alreadyCorrect) {
-        console.log('BirthdayService: Default view already correct.');
-        return;
-      }
-
-      // Delete all existing view fields — abort if this fails to prevent duplicates
-      const deleteResponse: SPHttpClientResponse = await this.spHttpClient.post(
-        `${viewBase}/viewfields/deleteallviewfields`,
-        SPHttpClient.configurations.v1,
-        { headers: postHeaders, body: '{}' }
-      );
-      if (!deleteResponse.ok) {
-        console.warn('BirthdayService: deleteallviewfields mislukt', deleteResponse.status);
-        return;
-      }
-
-      // Add desired fields in order
-      for (const field of desiredFields) {
-        await this.spHttpClient.post(
-          `${viewBase}/viewfields/addviewfield('${field}')`,
-          SPHttpClient.configurations.v1,
-          { headers: postHeaders }
-        );
-      }
-
-      console.log('BirthdayService: Default view updated.');
-    } catch (e) {
-      console.warn('BirthdayService: ensureDefaultView mislukt', e);
-    } finally {
-      // Always mark as done after first attempt — even if something failed.
-      // This is the key guard that prevents the function from running on every page load.
-      try { if (storageKey) localStorage.setItem(storageKey, '1'); } catch (e) { /* ignore */ }
-    }
-  }
-
   /**
    * Fetch items from the SharePoint Verjaardagen list.
    *
@@ -314,10 +210,9 @@ export class BirthdayService {
     leapYearStrategy: LeapYearStrategy,
     showAge: boolean
   ): Promise<IBirthday[]> {
-    // Silently create list + columns + view if missing (no-op for non-owners)
+    // Silently create list + columns if missing (no-op for non-owners)
     await this.ensureList(listTitle);
     await this.ensureListColumns(listTitle);
-    await this.ensureDefaultView(listTitle);
 
     const items = await this.fetchBirthdayEvents(listTitle);
     const today = new Date();
