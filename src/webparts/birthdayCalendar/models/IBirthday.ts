@@ -5,7 +5,10 @@ import { SPHttpClient } from '@microsoft/sp-http';
  */
 export interface ISharePointBirthdayItem {
   Id: number;
+  /** Fallback name field (used when Persoon is not set) */
   Title: string;
+  /** People column — preferred display name */
+  Persoon?: { Title: string };
   Geboortedatum: string;
   DatumEersteWerkdag?: string;
 }

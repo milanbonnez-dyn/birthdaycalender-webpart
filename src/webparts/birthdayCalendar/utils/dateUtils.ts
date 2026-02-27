@@ -129,7 +129,7 @@ export function transformEventToBirthday(
 
   const birthday: IBirthday = {
     id: event.Id,
-    name: event.Title,
+    name: event.Persoon?.Title ?? event.Title,
     originalDate,
     nextOccurrence,
     daysUntil,
@@ -171,7 +171,7 @@ export function transformToWorkAnniversary(
 
   return {
     id: event.Id,
-    name: event.Title,
+    name: event.Persoon?.Title ?? event.Title,
     originalDate,
     nextOccurrence,
     daysUntil,

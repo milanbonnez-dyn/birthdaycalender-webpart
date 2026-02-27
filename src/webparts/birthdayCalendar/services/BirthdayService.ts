@@ -19,6 +19,7 @@ export class BirthdayService {
   // GUIDs for the custom columns (must match elements.xml / schema.xml)
   private static readonly GEBOORTEDATUM_ID = '{3A7F9E2A-4B6C-4D8E-9F1A-2B3C4D5E6F7A}';
   private static readonly DATUM_EERSTE_WERKDAG_ID = '{7E2B5C4D-6A1F-4E9B-8C3D-1F2A3B4C5D6E}';
+  private static readonly PERSOON_ID = '{2C4D8E9F-1A3B-4C5D-6E7F-8A9B0C1D2E3F}';
 
   constructor(spHttpClient: SPHttpClient, siteUrl: string) {
     this.spHttpClient = spHttpClient;
@@ -72,21 +73,33 @@ export class BirthdayService {
    * lacks sufficient permissions (Manage Lists required).
    */
   public async ensureListColumns(listTitle: string): Promise<void> {
-    // Elke kolom onafhankelijk proberen: als de eerste faalt wordt de tweede toch geprobeerd
-    await this.ensureColumn(
-      listTitle, 'Geboortedatum', 'Geboortedatum', BirthdayService.GEBOORTEDATUM_ID
-    ).catch(e => console.warn('BirthdayService: Geboortedatum aanmaken mislukt', e));
+    const geboortedatumXml =
+      `<Field ID="${BirthdayService.GEBOORTEDATUM_ID}" Type="DateTime" DisplayName="Geboortedatum" ` +
+      `Required="FALSE" Format="DateOnly" StaticName="Geboortedatum" Name="Geboortedatum" />`;
 
-    await this.ensureColumn(
-      listTitle, 'DatumEersteWerkdag', 'Datum eerste werkdag', BirthdayService.DATUM_EERSTE_WERKDAG_ID
-    ).catch(e => console.warn('BirthdayService: DatumEersteWerkdag aanmaken mislukt', e));
+    const datumEersteWerkdagXml =
+      `<Field ID="${BirthdayService.DATUM_EERSTE_WERKDAG_ID}" Type="DateTime" DisplayName="Datum eerste werkdag" ` +
+      `Required="FALSE" Format="DateOnly" StaticName="DatumEersteWerkdag" Name="DatumEersteWerkdag" />`;
+
+    const persoonXml =
+      `<Field ID="${BirthdayService.PERSOON_ID}" Type="User" DisplayName="Persoon" ` +
+      `Required="FALSE" StaticName="Persoon" Name="Persoon" />`;
+
+    // Each column independently — failure of one doesn't block the others
+    await this.ensureColumn(listTitle, 'Geboortedatum', geboortedatumXml)
+      .catch(e => console.warn('BirthdayService: Geboortedatum aanmaken mislukt', e));
+
+    await this.ensureColumn(listTitle, 'DatumEersteWerkdag', datumEersteWerkdagXml)
+      .catch(e => console.warn('BirthdayService: DatumEersteWerkdag aanmaken mislukt', e));
+
+    await this.ensureColumn(listTitle, 'Persoon', persoonXml)
+      .catch(e => console.warn('BirthdayService: Persoon aanmaken mislukt', e));
   }
 
   private async ensureColumn(
     listTitle: string,
     internalName: string,
-    displayName: string,
-    fieldId: string
+    schemaXml: string
   ): Promise<void> {
     // Check if column already exists
     const checkUrl = `${this.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/fields/getbyinternalnameortitle('${internalName}')`;
@@ -97,11 +110,6 @@ export class BirthdayService {
     if (checkResponse.ok) {
       return; // Already exists
     }
-
-    // Create the column via SchemaXml
-    const schemaXml =
-      `<Field ID="${fieldId}" Type="DateTime" DisplayName="${displayName}" ` +
-      `Required="FALSE" Format="DateOnly" StaticName="${internalName}" Name="${internalName}" />`;
 
     const createUrl = `${this.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/fields/createfieldasxml`;
     const createResponse: SPHttpClientResponse = await this.spHttpClient.post(
@@ -130,6 +138,47 @@ export class BirthdayService {
   }
 
   /**
+   * Sets the default view of the list to show only the three relevant columns.
+   * Silently fails for users without Manage Lists permission.
+   */
+  public async ensureDefaultView(listTitle: string): Promise<void> {
+    try {
+      const viewBase = `${this.siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/defaultview`;
+      const postHeaders = {
+        'Content-Type': 'application/json;odata=nometadata',
+        'Accept': 'application/json;odata=nometadata'
+      };
+
+      // Verify the default view exists and we can access it
+      const viewResponse: SPHttpClientResponse = await this.spHttpClient.get(
+        viewBase,
+        SPHttpClient.configurations.v1
+      );
+      if (!viewResponse.ok) return;
+
+      // Remove all existing view fields
+      await this.spHttpClient.post(
+        `${viewBase}/viewfields/deleteallviewfields`,
+        SPHttpClient.configurations.v1,
+        { headers: postHeaders }
+      );
+
+      // Add the desired fields in order
+      for (const field of ['Persoon', 'Geboortedatum', 'DatumEersteWerkdag']) {
+        await this.spHttpClient.post(
+          `${viewBase}/viewfields/addviewfield('${field}')`,
+          SPHttpClient.configurations.v1,
+          { headers: postHeaders }
+        );
+      }
+
+      console.log('BirthdayService: Default view updated.');
+    } catch (e) {
+      console.warn('BirthdayService: ensureDefaultView mislukt', e);
+    }
+  }
+
+  /**
    * Fetch items from the SharePoint Verjaardagen list.
    *
    * @param listPath - List title or relative path (e.g., "Verjaardagen" or "Lists/Verjaardagen")
@@ -143,7 +192,8 @@ export class BirthdayService {
 
     let apiUrl = `${this.siteUrl}/_api/web/GetList(@listUrl)/items`;
     apiUrl += `?@listUrl='${encodeURIComponent(listRelativeUrl)}'`;
-    apiUrl += `&$select=Id,Title,Geboortedatum,DatumEersteWerkdag`;
+    apiUrl += `&$select=Id,Title,Persoon/Title,Geboortedatum,DatumEersteWerkdag`;
+    apiUrl += `&$expand=Persoon`;
     apiUrl += `&$orderby=Title asc`;
     apiUrl += `&$top=500`;
 
@@ -201,9 +251,10 @@ export class BirthdayService {
     leapYearStrategy: LeapYearStrategy,
     showAge: boolean
   ): Promise<IBirthday[]> {
-    // Silently create list + columns if missing (no-op for non-owners)
+    // Silently create list + columns + view if missing (no-op for non-owners)
     await this.ensureList(listTitle);
     await this.ensureListColumns(listTitle);
+    await this.ensureDefaultView(listTitle);
 
     const items = await this.fetchBirthdayEvents(listTitle);
     const today = new Date();
